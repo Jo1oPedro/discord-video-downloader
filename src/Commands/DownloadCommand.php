@@ -10,11 +10,22 @@ class DownloadCommand implements Command
         private User $author,
         private string $urlToDownload,
         private $onProgress,
+        private string $format = "",
     ) {}
     
     public function getAuthor(): User
     {
         return $this->author;
+    }
+
+    public function setFormat(string $format)
+    {
+        $this->format = $format;
+    }
+
+    public function getFormat(): string
+    {
+        return $this->format;
     }
     
     public function getUrlToDownload(): string

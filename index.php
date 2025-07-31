@@ -1,7 +1,7 @@
 <?php
 
 use App\DiscordBot\Commands\DownloadCommand;
-use App\DiscordBot\Music\Download;
+use App\DiscordBot\Media\Download;
 use Aws\S3\Exception\S3Exception;
 use Aws\S3\S3Client;
 use Discord\Builders\Components\Option;
@@ -27,7 +27,7 @@ $discord = new Discord([
     'intents' => Intents::getDefaultIntents() | Intents::MESSAGE_CONTENT
 ]);
 
-$youtubeDl = Download::getInstance();
+$youtubeDl = new Download("C:\\yt-dlp\\yt-dlp.exe");
 
 $pendingDownloads = [];
 
@@ -77,28 +77,22 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction) use 
 
     [, $origMsgId] = explode(":", $cid, 2);
 
+    /** @var DownloadCommand $downloadCommand */
     $downloadCommand = $pendingDownloads[$origMsgId] ?? null;
 
     if(!$downloadCommand) {
         return $interaction->respondWithMessage("❌ Não encontrei a URL (talvez tenha expirado?).");
     }
 
-    $format = $interaction->data->values[0];
+    $downloadCommand->setFormat($interaction->data->values[0]);
 
     $interaction
         ->acknowledge()
-        ->then(function () use ($discord, $interaction, $youtubeDl, $downloadCommand, $format, $s3) {
-            $file = "";
-            if($format === "mp3") {
-                $file = $youtubeDl->downloadMp3($downloadCommand);
-            }
-
-            if($format === "mp4") {
-                $file = $youtubeDl->downloadMp4($downloadCommand);
-            }
+        ->then(function () use ($discord, $interaction, $youtubeDl, $downloadCommand, $s3) {
+            $file = $youtubeDl->download($downloadCommand);
 
             $name = md5(uniqid());
-            $key = "uploads/$format/{$name}";
+            $key = "uploads/{$downloadCommand->getFormat()}/{$name}";
 
             try {
                 $s3->putObject([
