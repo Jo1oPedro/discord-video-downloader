@@ -110,8 +110,6 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction) use 
                 return;
             }
 
-            unlink($file["path"]);
-
             if($file["size"] / 1000 > 8000) {
                 $cmd = $s3->getCommand('GetObject', [
                     "Bucket" => $_ENV['AWS_BUCKET'],
@@ -126,7 +124,9 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction) use 
                     MessageBuilder::new()
                         ->setContent("✅ Download concluído! Aqui está seu link (válido por 30 min):\n{$url}"),
                     true
-                );
+                )->then(function () use ($file) {
+                    unlink($file["path"]);
+                });;
 
                 return;
             }
@@ -135,7 +135,9 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction) use 
                 MessageBuilder::new()
                 ->setContent("✅ Download concluído")
                 ->addFile($file["path"], basename($file["path"]))
-            );
+            )->then(function () use ($file) {
+                unlink($file["path"]);
+            });
         });
 
     unset($pendingDownloads[$origMsgId]);
