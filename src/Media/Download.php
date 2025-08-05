@@ -13,10 +13,10 @@ class Download
     private Options $options;
 
     public function __construct(
-        string $binPath
+        string $binPath = ""
     ) {
         $this->youtubeDl = new YoutubeDl();
-        $this->youtubeDl->setBinPath($binPath);
+        //$this->youtubeDl->setBinPath($binPath);
         $this->youtubeDl->debug(function (string $type, string $buffer): void {
             // $type will be either Process::OUT or Process::ERR
             // here you can log it, accumulate it, send it to Discord, etc.

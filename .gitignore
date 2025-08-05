@@ -1,6 +1,6 @@
 .env
 /vendor
-/medias
+/bot/medias
 *.idea
 cookies.txt
-/cookies
+/bot/cookies

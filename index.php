@@ -12,6 +12,9 @@ use Discord\Parts\Channel\Message;
 use Discord\Parts\Interactions\Interaction;
 use Discord\WebSockets\Event;
 use Discord\WebSockets\Intents;
+use PhpAmqpLib\Connection\AMQPConnectionConfig;
+use PhpAmqpLib\Connection\AMQPConnectionFactory;
+use PhpAmqpLib\Message\AMQPMessage;
 
 require_once "vendor/autoload.php";
 
@@ -20,6 +23,26 @@ $dotEnv->load();
 
 $config = require_once __DIR__ . "/config.php";
 
+$amqpConfig = new AMQPConnectionConfig();
+$amqpConfig->setHost($_ENV['QUEUE_HOST']);
+$amqpConfig->setPort($_ENV['QUEUE_PORT']);
+$amqpConfig->setUser($_ENV['QUEUE_USER']);
+$amqpConfig->setPassword($_ENV['QUEUE_PASSWORD']);
+
+$ampqConnection = AMQPConnectionFactory::create($amqpConfig);
+
+$channel = $ampqConnection->channel();
+$channel->queue_declare(
+    "discord_bot_medias",
+    false,
+    true,
+    false,
+    false
+);
+
+$msg = new AMQPMessage("dale123");
+$channel->basic_publish($msg, "", "discord_bot_medias");
+
 $s3 = new S3Client($config["aws"]);
 
 $discord = new Discord([
@@ -27,7 +50,7 @@ $discord = new Discord([
     'intents' => Intents::getDefaultIntents() | Intents::MESSAGE_CONTENT
 ]);
 
-$youtubeDl = new Download("C:\\yt-dlp\\yt-dlp.exe");
+$youtubeDl = new Download(/*"C:\\yt-dlp\\yt-dlp.exe"*/);
 
 $pendingDownloads = [];
 
