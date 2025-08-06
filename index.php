@@ -2,7 +2,6 @@
 
 use App\DiscordBot\Commands\DownloadCommand;
 use App\DiscordBot\Media\Download;
-use Aws\S3\Exception\S3Exception;
 use Aws\S3\S3Client;
 use Discord\Builders\Components\Option;
 use Discord\Builders\Components\StringSelect;
@@ -40,9 +39,6 @@ $channel->queue_declare(
     false
 );
 
-$msg = new AMQPMessage("dale123");
-$channel->basic_publish($msg, "", "discord_bot_medias");
-
 $s3 = new S3Client($config["aws"]);
 
 $discord = new Discord([
@@ -56,19 +52,10 @@ $pendingDownloads = [];
 
 $discord->on('ready', function (Discord $discord) use ($youtubeDl, &$pendingDownloads) {
     $discord->on(Event::MESSAGE_CREATE, function (Message $message, Discord $discord) use ($youtubeDl, &$pendingDownloads) {
-        $onProgress = function (?string $target, string $percentage, ?string $size, ?string $speed, ?string $eta, ?string $totalTime) use ($message) {
-            $text = "📥 Baixando: $percentage ($size)";
-            //$message->channel->sendMessage($text);
-        };
-
         if(str_contains($message->content, "!download")) {
             $url = trim(str_replace("!download", "", $message->content));
 
-            $downloadCommand = new DownloadCommand(
-                $message->author,
-                $url,
-                $onProgress
-            );
+            $downloadCommand = new DownloadCommand($message->author, $url);
 
             $origMsgId = $message->id;
             $pendingDownloads[$origMsgId] = $downloadCommand;
@@ -91,7 +78,7 @@ $discord->on('ready', function (Discord $discord) use ($youtubeDl, &$pendingDown
     });
 });
 
-$discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction) use ($discord, $youtubeDl, &$pendingDownloads, $s3) {
+$discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction) use ($discord, $youtubeDl, &$pendingDownloads, $s3, $channel) {
     $cid = $interaction->data->custom_id;
 
     if(!str_starts_with($cid, "download_format:")) {
@@ -111,56 +98,22 @@ $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction) use 
 
     $interaction
         ->acknowledge()
-        ->then(function () use ($discord, $interaction, $youtubeDl, $downloadCommand, $s3) {
-            $file = $youtubeDl->download($downloadCommand);
+        ->then(function () use ($discord, $interaction, $youtubeDl, $downloadCommand, $s3, $channel) {
+            $payload = [
+                "channel_id" => $interaction->channel_id,
+                "download_url" => $downloadCommand->getUrlToDownload(),
+                "format" => $downloadCommand->getFormat(),
+                "author_id" => $downloadCommand->getAuthor()->id
+            ];
 
-            $name = md5(uniqid());
-            $key = "uploads/{$downloadCommand->getFormat()}/{$name}";
-
-            try {
-                $s3->putObject([
-                    "Bucket" => $_ENV['AWS_BUCKET'],
-                    "Key" => $key,
-                    "Body" => fopen($file["path"], "rb"),
-                    "ACL" => "public-read",
-                ]);
-            } catch (S3Exception $exception) {
-                $interaction->sendFollowUpMessage(
-                    MessageBuilder::new()
-                        ->setContent("✅❌ Ocorreu um erro ao realizar o seu download."),
-                    true
-                );
-                return;
-            }
-
-            if($file["size"] / 1000 > 8000) {
-                $cmd = $s3->getCommand('GetObject', [
-                    "Bucket" => $_ENV['AWS_BUCKET'],
-                    "Key" => $key,
-                ]);
-
-                $request = $s3->createPresignedRequest($cmd, '+30 minutes');
-
-                $url = (string) $request->getUri();
-
-                $interaction->sendFollowUpMessage(
-                    MessageBuilder::new()
-                        ->setContent("✅ Download concluído! Aqui está seu link (válido por 30 min):\n{$url}"),
-                    true
-                )->then(function () use ($file) {
-                    unlink($file["path"]);
-                });;
-
-                return;
-            }
+            $msg = new AMQPMessage(json_encode($payload));
+            $channel->basic_publish($msg, "", "discord_bot_medias");
 
             $interaction->sendFollowUpMessage(
                 MessageBuilder::new()
-                ->setContent("✅ Download concluído")
-                ->addFile($file["path"], basename($file["path"]))
-            )->then(function () use ($file) {
-                unlink($file["path"]);
-            });
+                    ->setContent("✅ Seu download está sendo realizado :)"),
+                true
+            );
         });
 
     unset($pendingDownloads[$origMsgId]);

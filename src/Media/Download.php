@@ -19,7 +19,6 @@ class Download
         //$this->youtubeDl->setBinPath($binPath);
         $this->youtubeDl->debug(function (string $type, string $buffer): void {
             // $type will be either Process::OUT or Process::ERR
-            // here you can log it, accumulate it, send it to Discord, etc.
             echo strtoupper($type) . ': ' . $buffer;
         });
         $this->options = Options::create()

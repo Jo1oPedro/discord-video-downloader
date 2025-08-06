@@ -9,7 +9,7 @@ class DownloadCommand implements Command
     public function __construct(
         private User $author,
         private string $urlToDownload,
-        private $onProgress,
+        private $onProgress = "",
         private string $format = "",
     ) {}
     
@@ -35,6 +35,9 @@ class DownloadCommand implements Command
 
     public function getOnProgress(): callable
     {
+        if(!is_callable($this->onProgress)) {
+            return function () {};
+        }
         return $this->onProgress;
     }
 }
