@@ -2,14 +2,13 @@
 
 use App\DiscordBot\Commands\DownloadCommand;
 use App\DiscordBot\Media\Download;
+use App\DiscordBot\Queue\Singleton\AmqpConnection;
 use Aws\S3\Exception\S3Exception;
 use Aws\S3\S3Client;
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
 use Discord\Parts\User\User;
 use Discord\WebSockets\Intents;
-use PhpAmqpLib\Connection\AMQPConnectionConfig;
-use PhpAmqpLib\Connection\AMQPConnectionFactory;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -29,12 +28,8 @@ $youtubeDl = new Download();
 $s3 = new S3Client($config["aws"]);
 
 $discord->on('ready', function(Discord $discord) use($youtubeDl, $s3) {
-    $amqpConfig = new AMQPConnectionConfig();
-    $amqpConfig->setHost($_ENV['QUEUE_HOST']);
-    $amqpConfig->setPort($_ENV['QUEUE_PORT']);
-    $amqpConfig->setUser($_ENV['QUEUE_USER']);
-    $amqpConfig->setPassword($_ENV['QUEUE_PASSWORD']);
-    $ampqConnection = AMQPConnectionFactory::create($amqpConfig);
+    $ampqConnection = AmqpConnection::getInstance();
+
     $channel = $ampqConnection->channel();
 
     $channel->queue_declare(

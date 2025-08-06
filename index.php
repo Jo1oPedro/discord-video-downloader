@@ -2,6 +2,7 @@
 
 use App\DiscordBot\Commands\DownloadCommand;
 use App\DiscordBot\Media\Download;
+use App\DiscordBot\Queue\Singleton\AmqpConnection;
 use Aws\S3\S3Client;
 use Discord\Builders\Components\Option;
 use Discord\Builders\Components\StringSelect;
@@ -11,8 +12,6 @@ use Discord\Parts\Channel\Message;
 use Discord\Parts\Interactions\Interaction;
 use Discord\WebSockets\Event;
 use Discord\WebSockets\Intents;
-use PhpAmqpLib\Connection\AMQPConnectionConfig;
-use PhpAmqpLib\Connection\AMQPConnectionFactory;
 use PhpAmqpLib\Message\AMQPMessage;
 
 require_once "vendor/autoload.php";
@@ -22,13 +21,7 @@ $dotEnv->load();
 
 $config = require_once __DIR__ . "/config.php";
 
-$amqpConfig = new AMQPConnectionConfig();
-$amqpConfig->setHost($_ENV['QUEUE_HOST']);
-$amqpConfig->setPort($_ENV['QUEUE_PORT']);
-$amqpConfig->setUser($_ENV['QUEUE_USER']);
-$amqpConfig->setPassword($_ENV['QUEUE_PASSWORD']);
-
-$ampqConnection = AMQPConnectionFactory::create($amqpConfig);
+$ampqConnection = AmqpConnection::getInstance();
 
 $channel = $ampqConnection->channel();
 $channel->queue_declare(
