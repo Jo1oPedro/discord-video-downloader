@@ -12,7 +12,7 @@ use Discord\WebSockets\Intents;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
 
-require_once "../vendor/autoload.php";
+require_once __DIR__ . "/../vendor/autoload.php";
 
 $dotEnv = Dotenv\Dotenv::createImmutable(__DIR__ . "/..");
 $dotEnv->load();
