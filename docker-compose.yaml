@@ -1,16 +1,4 @@
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    networks:
-      - my-shared-network
-
   discord-bot:
     build:
       context: .
@@ -23,8 +11,6 @@ services:
     stdin_open: true
     volumes:
       - ./:/var/www/app
-    depends_on:
-      - rabbitmq
     #command: ["php", "/var/www/app/index.php"]
     environment:
       RABBITMQ_HOST: rabbitmq
@@ -47,7 +33,6 @@ services:
       - ./:/var/www/app
     depends_on:
       - discord-bot
-      - rabbitmq
     environment:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: guest
